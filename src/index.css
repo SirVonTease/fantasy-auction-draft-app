@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-nfl-blue hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  }
+  
+  .player-card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200 cursor-pointer;
+  }
+  
+  .draft-pick {
+    @apply bg-gradient-to-r from-draft-green to-green-600 text-white font-semibold py-2 px-3 rounded-lg;
+  }
+  
+  .auction-bid {
+    @apply bg-gradient-to-r from-draft-yellow to-yellow-600 text-white font-semibold py-2 px-3 rounded-lg;
+  }
+}
