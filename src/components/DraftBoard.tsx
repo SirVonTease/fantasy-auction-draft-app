@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useDraft } from '../context/DraftContext'
 import { Player } from '../context/DraftContext'
+import { fantasyDataService, FantasyPlayer } from '../services/fantasyDataService'
 import { 
   Play, 
   Pause, 
@@ -8,47 +9,51 @@ import {
   ChevronLeft, 
   ChevronRight,
   Users,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react'
 
 const DraftBoard = () => {
   const { state, dispatch } = useDraft()
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [isPaused, setIsPaused] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  // Load sample data on first render
+  // Load real fantasy data on first render
   useEffect(() => {
     if (state.players.length === 0) {
-      loadSampleData()
+      loadFantasyData()
     }
   }, [])
 
-  const loadSampleData = () => {
-    const samplePlayers: Player[] = [
-      { id: '1', name: 'Christian McCaffrey', position: 'RB', team: 'SF', rank: 1, adp: 1.2, tier: 1, bye: 9, projectedPoints: 320, isDrafted: false },
-      { id: '2', name: 'Tyreek Hill', position: 'WR', team: 'MIA', rank: 2, adp: 2.1, tier: 1, bye: 11, projectedPoints: 310, isDrafted: false },
-      { id: '3', name: 'Austin Ekeler', position: 'RB', team: 'WAS', rank: 3, adp: 3.5, tier: 1, bye: 14, projectedPoints: 295, isDrafted: false },
-      { id: '4', name: 'CeeDee Lamb', position: 'WR', team: 'DAL', rank: 4, adp: 4.2, tier: 1, bye: 7, projectedPoints: 290, isDrafted: false },
-      { id: '5', name: 'Bijan Robinson', position: 'RB', team: 'ATL', rank: 5, adp: 5.8, tier: 2, bye: 11, projectedPoints: 285, isDrafted: false },
-      { id: '6', name: 'Ja\'Marr Chase', position: 'WR', team: 'CIN', rank: 6, adp: 6.1, tier: 2, bye: 7, projectedPoints: 280, isDrafted: false },
-      { id: '7', name: 'Saquon Barkley', position: 'RB', team: 'PHI', rank: 7, adp: 7.3, tier: 2, bye: 10, projectedPoints: 275, isDrafted: false },
-      { id: '8', name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', rank: 8, adp: 8.5, tier: 2, bye: 9, projectedPoints: 270, isDrafted: false },
-      { id: '9', name: 'Jonathan Taylor', position: 'RB', team: 'IND', rank: 9, adp: 9.2, tier: 2, bye: 11, projectedPoints: 265, isDrafted: false },
-      { id: '10', name: 'Stefon Diggs', position: 'WR', team: 'HOU', rank: 10, adp: 10.1, tier: 2, bye: 7, projectedPoints: 260, isDrafted: false },
-    ]
+  const loadFantasyData = async () => {
+    setIsLoading(true)
+    try {
+      const players = await fantasyDataService.getPlayerRankings()
+      const teams = Array.from({ length: 12 }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Team ${i + 1}`,
+        owner: `Owner ${i + 1}`,
+        players: [],
+        budget: 200,
+        remainingBudget: 200,
+        picks: Array.from({ length: 16 }, (_, j) => i + 1 + (j * 12))
+      }))
 
-    const sampleTeams = Array.from({ length: 12 }, (_, i) => ({
-      id: `team-${i + 1}`,
-      name: `Team ${i + 1}`,
-      owner: `Owner ${i + 1}`,
-      players: [],
-      budget: 200,
-      remainingBudget: 200,
-      picks: Array.from({ length: 16 }, (_, j) => i + 1 + (j * 12))
-    }))
+      dispatch({ type: 'SET_PLAYERS', payload: players })
+      dispatch({ type: 'SET_TEAMS', payload: teams })
+      setLastUpdated(new Date())
+    } catch (error) {
+      console.error('Error loading fantasy data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-    dispatch({ type: 'SET_PLAYERS', payload: samplePlayers })
-    dispatch({ type: 'SET_TEAMS', payload: sampleTeams })
+  const refreshData = async () => {
+    fantasyDataService.clearCache()
+    await loadFantasyData()
   }
 
   const handleDraftPlayer = (player: Player) => {
@@ -88,8 +93,40 @@ const DraftBoard = () => {
 
   const availablePlayers = state.players.filter(p => !p.isDrafted).slice(0, 20)
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <RefreshCw className="animate-spin mx-auto mb-4 text-nfl-blue" size={48} />
+          <h2 className="text-xl font-semibold text-gray-700">Loading Fantasy Data...</h2>
+          <p className="text-gray-500">Fetching latest player rankings and projections</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
+      {/* Data Status */}
+      {lastUpdated && (
+        <div className="card bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <RefreshCw size={16} className="text-blue-600" />
+              <span className="text-sm text-blue-700">
+                Data updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            </div>
+            <button
+              onClick={refreshData}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Draft Status */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
